@@ -86,6 +86,19 @@ def main():
                 print(f"\n🔍 Debug mode turned {status}\n")
                 continue
             
+            # ADD THIS NEW COMMAND FOR RATE LIMIT INFO
+            if user_input.lower() == 'stats' or user_input.lower() == 'usage':
+                from src.agent import get_api_stats
+                stats = get_api_stats()
+                print(f"\n📊 **API Usage Statistics:**")
+                print(f"   • Total requests today: {stats['total_requests']}")
+                print(f"   • Blocked requests: {stats['blocked_requests']}")
+                print(f"   • Remaining this minute: {stats['remaining_this_minute']}")
+                print(f"   • Remaining today: {stats['remaining_today']}")
+                print(f"   • Minute reset in: {stats['minute_reset_in']:.1f}s")
+                print(f"   • Day reset in: {stats['day_reset_in']/3600:.1f}h\n")
+                continue
+            
             # Get agent response
             response, state = agent.get_response(user_input, state)
             print(f"\n🤖 **Agent:** {response}\n")
