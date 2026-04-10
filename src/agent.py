@@ -66,7 +66,7 @@ class AutoStreamAgent:
     def process_intent(self, state: AgentState) -> Dict[str, Any]:
         """Process and classify user intent"""
         # If we're in the middle of lead collection, stay in high_intent
-        if state.get("waiting_for") or state.get("name") or state.get("email") or state.get("platform"):
+        if state.get("waiting_for") or state.get("name") or state.get("email") or state.get("platform") or state.get("selected_plan"):
             if not state.get("lead_captured", False):
                 return {"intent": "high_intent"}
         
@@ -82,7 +82,7 @@ class AutoStreamAgent:
     
     def route_intent(self, state: AgentState) -> str:
         """Route to appropriate handler based on detected intent"""
-        if state.get("waiting_for") or (state.get("name") or state.get("email") or state.get("platform")):
+        if state.get("waiting_for") or state.get("name") or state.get("email") or state.get("platform") or state.get("selected_plan"):
             if not state.get("lead_captured", False):
                 return "high_intent"
         
@@ -98,7 +98,7 @@ I can help you with:
 • 📊 **Pricing & Plans** - Basic ($29) and Pro ($79) options
 • ✨ **Features** - Video editing, AI captions, 4K resolution
 • 💰 **Policies** - Refunds, support availability
-• 🚀 **Signing Up** - Get started with Pro plan
+• 🚀 **Signing Up** - Get started with a plan
 
 What would you like to know about AutoStream?"""
         
@@ -145,28 +145,58 @@ Is there anything else I can help you with?"""
         # Track what we're waiting for
         waiting_for = updated_state.get("waiting_for")
         
-        # IMPORTANT: Only extract information based on what we're waiting for
-        if waiting_for == "name":
-            # We asked for name, so this response should be the name
+        # Step 1: Ask for plan selection first
+        if waiting_for == "plan":
+            # Check if user selected a plan
+            last_message_lower = last_message.lower()
+            if "pro" in last_message_lower or "79" in last_message_lower:
+                updated_state["selected_plan"] = "Pro"
+                updated_state["waiting_for"] = "name"
+                print(f"[DEBUG] Plan selected: {updated_state['selected_plan']}")
+            elif "basic" in last_message_lower or "29" in last_message_lower:
+                updated_state["selected_plan"] = "Basic"
+                updated_state["waiting_for"] = "name"
+                print(f"[DEBUG] Plan selected: {updated_state['selected_plan']}")
+            else:
+                # Invalid selection, ask again
+                response = """Please select either:
+• **Pro** plan ($79/month) - Unlimited videos, 4K, AI captions
+• **Basic** plan ($29/month) - 10 videos/month, 720p
+
+Which plan would you like to sign up for?"""
+                new_messages = messages + [response]
+                return {
+                    "messages": new_messages,
+                    "intent": "high_intent",
+                    "selected_plan": updated_state.get("selected_plan"),
+                    "name": updated_state.get("name"),
+                    "email": updated_state.get("email"),
+                    "platform": updated_state.get("platform"),
+                    "lead_captured": updated_state.get("lead_captured", False),
+                    "waiting_for": updated_state.get("waiting_for"),
+                    "conversation_history": updated_state.get("conversation_history", [])
+                }
+        
+        # Step 2: Capture name after plan is selected
+        elif waiting_for == "name":
             potential_name = last_message.strip()
-            # Validate it's a proper name (not a sentence, not too long)
             if len(potential_name.split()) <= 3 and len(potential_name) <= 50:
-                if not any(keyword in potential_name.lower() for keyword in ["want", "subscribe", "pro", "plan", "sign", "up"]):
+                if not any(keyword in potential_name.lower() for keyword in ["want", "subscribe", "pro", "basic", "plan", "sign", "up"]):
                     updated_state["name"] = potential_name.title()
-                    updated_state["waiting_for"] = "email"  # Next, ask for email
+                    updated_state["waiting_for"] = "email"
                     print(f"[DEBUG] Name captured: {updated_state['name']}")
         
+        # Step 3: Capture email
         elif waiting_for == "email":
-            # We asked for email, so this response should be the email
             email_pattern = r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'
             email_match = re.search(email_pattern, last_message)
             if email_match:
                 updated_state["email"] = email_match.group()
-                updated_state["waiting_for"] = "platform"  # Next, ask for platform
+                updated_state["waiting_for"] = "platform"
                 print(f"[DEBUG] Email captured: {updated_state['email']}")
         
+        # Step 4: Capture platform
         elif waiting_for == "platform":
-            # We asked for platform, so this response should be the platform
             platforms = {
                 "youtube": "YouTube", "instagram": "Instagram", "tiktok": "TikTok",
                 "facebook": "Facebook", "twitter": "Twitter", "linkedin": "LinkedIn",
@@ -183,53 +213,74 @@ Is there anything else I can help you with?"""
                 print(f"[DEBUG] Platform captured: {updated_state['platform']}")
         
         # If this is the first high-intent message (waiting_for is None)
-        if not waiting_for and not updated_state.get("name") and not updated_state.get("email") and not updated_state.get("platform"):
-            # This is the initial high-intent message - don't capture as name
-            updated_state["waiting_for"] = "name"
-            print(f"[DEBUG] Starting lead collection - will ask for name")
+        if not waiting_for and not updated_state.get("selected_plan"):
+            # First, ask which plan they want
+            updated_state["waiting_for"] = "plan"
+            print(f"[DEBUG] Starting lead collection - will ask for plan selection")
         
-        # Determine what to ask next
-        if updated_state.get("waiting_for") == "name" and not updated_state.get("name"):
-            response = """🎯 **Great choice!**
+        # Determine what to ask next based on waiting_for
+        if updated_state.get("waiting_for") == "plan" and not updated_state.get("selected_plan"):
+            response = """🎯 **Great! Let's get you started with AutoStream.**
 
-I see you're interested in AutoStream Pro. Let me get you started.
+Which plan would you like to sign up for?
+
+**Pro Plan** - $79/month
+• Unlimited videos
+• 4K resolution  
+• AI captions
+• 24/7 support
+
+**Basic Plan** - $29/month
+• 10 videos/month
+• 720p resolution
+• Email support
+
+Please type **Pro** or **Basic** to continue."""
+        
+        elif updated_state.get("waiting_for") == "name" and not updated_state.get("name"):
+            plan = updated_state.get("selected_plan", "Pro")
+            response = f"""Excellent choice! The {plan} plan is perfect for your needs.
 
 **What's your name?** (This will be used for your account)"""
         
         elif updated_state.get("waiting_for") == "email" and not updated_state.get("email"):
-            # Name should already be captured at this point
             name = updated_state.get("name", "there")
             response = f"""Thanks **{name}**! 
 
 **What's your email address?** 
-We'll send the Pro plan details and account setup instructions there."""
+We'll send the {updated_state['selected_plan']} plan details and account setup instructions there."""
         
         elif updated_state.get("waiting_for") == "platform" and not updated_state.get("platform"):
             name = updated_state.get("name", "there")
+            plan = updated_state.get("selected_plan", "Pro")
             response = f"""Perfect **{name}**!
 
 **Which platform do you create content for?** 
-(YouTube, Instagram, TikTok, etc.)"""
+(YouTube, Instagram, TikTok, Facebook, etc.)
+
+This helps us tailor your {plan} plan experience."""
         
-        elif updated_state.get("name") and updated_state.get("email") and updated_state.get("platform"):
+        elif updated_state.get("selected_plan") and updated_state.get("name") and updated_state.get("email") and updated_state.get("platform"):
             # All information collected - trigger lead capture
             result = mock_lead_capture(
                 updated_state["name"],
                 updated_state["email"],
-                updated_state["platform"]
+                updated_state["platform"],
+                updated_state["selected_plan"]  # Pass the selected plan
             )
             
             if result["success"]:
-                response = f"""🎉 **Welcome to AutoStream Pro, {updated_state['name']}!**
+                response = f"""🎉 **Welcome to AutoStream {updated_state['selected_plan']} Plan, {updated_state['name']}!**
 
 ✅ Lead ID: `{result['lead_id']}`
 📧 Confirmation sent to: {updated_state['email']}
 🎬 Platform: {updated_state['platform']}
+📊 Plan: {updated_state['selected_plan']}
 
 **What happens next?**
 1. Our sales team will contact you within 24 hours
 2. You'll receive setup instructions via email
-3. Get 7-day free trial on Pro plan
+3. Get 7-day free trial on the {updated_state['selected_plan']} plan
 
 Anything else I can help with?"""
                 updated_state["lead_captured"] = True
@@ -237,11 +288,15 @@ Anything else I can help with?"""
             else:
                 response = f"""❌ **Error**: {result['message']}
 
-Please provide valid information to continue with the Pro plan signup."""
+Please provide valid information to continue with the signup."""
         else:
-            # Fallback - shouldn't reach here
-            response = "I'm sorry, let me start over. What's your name?"
-            updated_state["waiting_for"] = "name"
+            # Fallback - restart the process
+            response = "Let me start over. Which plan would you like to sign up for? Pro or Basic?"
+            updated_state["waiting_for"] = "plan"
+            updated_state["selected_plan"] = None
+            updated_state["name"] = None
+            updated_state["email"] = None
+            updated_state["platform"] = None
         
         new_messages = messages + [response]
         
@@ -249,6 +304,7 @@ Please provide valid information to continue with the Pro plan signup."""
         return {
             "messages": new_messages,
             "intent": "high_intent",
+            "selected_plan": updated_state.get("selected_plan"),
             "name": updated_state.get("name"),
             "email": updated_state.get("email"),
             "platform": updated_state.get("platform"),

@@ -2,19 +2,20 @@
   "pricing": {
     "basic": {
       "price": "$29/month",
-      "features": ["10 videos/month", "720p resolution"]
+      "features": ["10 videos/month", "720p resolution", "Basic editing tools", "Email support"]
     },
     "pro": {
       "price": "$79/month",
-      "features": ["Unlimited videos", "4K resolution", "AI captions"]
+      "features": ["Unlimited videos", "4K resolution", "AI captions", "Advanced editing", "Priority rendering", "24/7 support"]
     }
   },
   "policies": {
     "refund": "No refunds after 7 days",
     "support": "24/7 support available only on Pro plan"
   },
-  "faq": {
-    "what_is_autostream": "AutoStream is an AI-powered automated video editing platform for content creators.",
-    "how_to_start": "You can start by signing up for our Pro plan which includes a 7-day trial."
+  "features": {
+    "ai_captions": "AI-powered automatic caption generation for videos",
+    "resolution": "Pro: 4K Ultra HD, Basic: 720p HD",
+    "video_limit": "Pro: Unlimited, Basic: 10 videos/month"
   }
 }

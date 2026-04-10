@@ -31,22 +31,20 @@ def validate_platform(platform: str) -> bool:
     platform_clean = platform.lower().strip()
     return platform_clean in valid_platforms or len(platform_clean) >= 2
 
-def mock_lead_capture(name: str, email: str, platform: str) -> Dict[str, Any]:
+def mock_lead_capture(name: str, email: str, platform: str, plan: str = "Pro") -> dict:
     """
     Mock API function for lead capture
     
-    In production, this would make an HTTP request to your CRM,
-    database, or lead management system.
-    
     Args:
-        name: User's full name
+        name: User's name
         email: User's email address
-        platform: Content creation platform
+        platform: Creator platform
+        plan: Selected plan (Basic or Pro)
     
     Returns:
-        dict: Response with status, message, and lead ID
+        dict: Response with status and message
     """
-    # Validate all inputs before "saving"
+    # Validate inputs
     if not validate_name(name):
         return {
             "success": False,
@@ -75,16 +73,17 @@ def mock_lead_capture(name: str, email: str, platform: str) -> Dict[str, Any]:
     print(f"✅ Name: {name.strip()}")
     print(f"✅ Email: {email.strip().lower()}")
     print(f"✅ Platform: {platform.strip().capitalize()}")
+    print(f"✅ Selected Plan: {plan}")
     print(f"⏰ Timestamp: {__import__('datetime').datetime.now()}")
     print(f"{'='*60}\n")
     
     # Generate a mock lead ID
     import hashlib
-    lead_hash = hashlib.md5(f"{name}{email}{platform}".encode()).hexdigest()[:8]
+    lead_hash = hashlib.md5(f"{name}{email}{platform}{plan}".encode()).hexdigest()[:8]
     
     return {
         "success": True,
-        "message": f"Lead captured successfully: {name}, {email}, {platform}",
+        "message": f"Lead captured successfully: {name}, {email}, {platform}, {plan} plan",
         "lead_id": f"LD-{lead_hash.upper()}"
     }
 
