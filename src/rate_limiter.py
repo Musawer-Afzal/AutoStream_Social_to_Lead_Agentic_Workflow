@@ -5,7 +5,7 @@ Free tier limits: 60 requests per minute (typically)
 
 import time
 import threading
-from datetime import datetime, timedelta
+# from datetime import datetime, timedelta
 from collections import deque
 from functools import wraps
 from typing import Dict, Optional
@@ -209,7 +209,7 @@ class APIRateLimiter:
     def get_remaining_for_prompt(self) -> str:
         """Get user-friendly remaining quota info"""
         stats = self.get_stats()
-        return f"""📊 **API Usage Stats:**
+        return f"""**API Usage Stats:**
 • Remaining this minute: {stats['remaining_this_minute']} requests
 • Remaining today: {stats['remaining_today']} requests
 • Total used today: {stats['total_requests']} requests
