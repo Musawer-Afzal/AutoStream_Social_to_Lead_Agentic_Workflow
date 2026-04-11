@@ -90,7 +90,7 @@ def main():
             if user_input.lower() == 'stats' or user_input.lower() == 'usage':
                 from src.agent import get_api_stats
                 stats = get_api_stats()
-                print(f"\n📊 **API Usage Statistics:**")
+                print(f"**API Usage Statistics:**")
                 print(f"   • Total requests today: {stats['total_requests']}")
                 print(f"   • Blocked requests: {stats['blocked_requests']}")
                 print(f"   • Remaining this minute: {stats['remaining_this_minute']}")
