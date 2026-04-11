@@ -33,6 +33,7 @@ An intelligent conversational AI agent built with LangGraph and Google Gemini 2.
 | API Rate Limiting | Token Bucket + Sliding Window |
 
 ## 📁 Project Structure
+```
 autostream-agent/
 │
 ├── main.py # Entry point - CLI interface
@@ -51,7 +52,7 @@ autostream-agent/
 ├── intent.py # Intent classification (rule-based)
 ├── tools.py # Lead capture mock API & validation
 └── rate_limiter.py # API rate limiting protection
-
+```
 
 ## 🚀 How to Run Locally
 
