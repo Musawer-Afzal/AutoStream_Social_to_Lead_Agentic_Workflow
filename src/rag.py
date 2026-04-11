@@ -1,6 +1,6 @@
 import json
 import os
-from typing import Dict, List, Optional
+from typing import Dict
 
 class KnowledgeBase:
     """RAG-powered knowledge retrieval from local JSON"""
@@ -64,25 +64,25 @@ class KnowledgeBase:
         # Resolution questions
         elif any(word in query_lower for word in ["resolution", "720p", "4k", "quality", "hd"]):
             if "4k" in query_lower or "pro" in query_lower:
-                return "🎬 **Video Quality**: Pro plan supports **4K Ultra HD** resolution, while Basic plan supports **720p HD**."
+                return "**Video Quality**: Pro plan supports **4K Ultra HD** resolution, while Basic plan supports **720p HD**."
             else:
-                return "🎬 **Video Quality**: Basic plan: 720p HD | Pro plan: 4K Ultra HD"
+                return "**Video Quality**: Basic plan: 720p HD | Pro plan: 4K Ultra HD"
         
         # AI Captions questions
         elif any(word in query_lower for word in ["caption", "subtitles", "ai caption", "auto caption"]):
-            return "✨ **AI Captions**: Pro plan includes AI-powered automatic caption generation for all videos. Basic plan does not include this feature."
+            return "**AI Captions**: Pro plan includes AI-powered automatic caption generation for all videos. Basic plan does not include this feature."
         
         # Video limits
         elif any(word in query_lower for word in ["video limit", "unlimited", "how many video", "videos per month"]):
-            return "📹 **Video Limits**: Basic plan: 10 videos/month | Pro plan: Unlimited videos"
+            return "**Video Limits**: Basic plan: 10 videos/month | Pro plan: Unlimited videos"
         
         # Refund related queries
         elif any(word in query_lower for word in ["refund", "return", "cancel", "cancellation", "money back"]):
-            return f"💰 **Refund Policy**: {self.data['policies']['refund']}"
+            return f"**Refund Policy**: {self.data['policies']['refund']}"
         
         # Support related queries
         elif any(word in query_lower for word in ["support", "help", "24/7", "customer service", "contact"]):
-            return f"🎧 **Support**: {self.data['policies']['support']}"
+            return f"**Support**: {self.data['policies']['support']}"
         
         # Compare plans
         elif any(word in query_lower for word in ["compare", "difference", "versus", "vs"]):
@@ -99,7 +99,7 @@ class KnowledgeBase:
         """Format Basic plan pricing only"""
         pricing = self.data["pricing"]
         return f"""
-📊 **Basic Plan**: {pricing['basic']['price']}
+**Basic Plan**: {pricing['basic']['price']}
   ✓ {pricing['basic']['features'][0]}
   ✓ {pricing['basic']['features'][1]}
 """
@@ -108,7 +108,7 @@ class KnowledgeBase:
         """Format Pro plan pricing only"""
         pricing = self.data["pricing"]
         return f"""
-⭐ **Pro Plan**: {pricing['pro']['price']}
+**Pro Plan**: {pricing['pro']['price']}
   ✓ {pricing['pro']['features'][0]}
   ✓ {pricing['pro']['features'][1]}
   ✓ {pricing['pro']['features'][2]}
@@ -118,7 +118,7 @@ class KnowledgeBase:
         """Format complete pricing information"""
         pricing = self.data["pricing"]
         return f"""
-📊 **AutoStream Pricing Plans**
+**AutoStream Pricing Plans**
 
 **Basic Plan**: {pricing['basic']['price']}
   ✓ {pricing['basic']['features'][0]}
@@ -137,17 +137,17 @@ class KnowledgeBase:
     def _format_pro_features(self) -> str:
         """Format Pro plan features in detail"""
         return f"""
-⭐ **AutoStream Pro Plan Features**
+**AutoStream Pro Plan Features**
 
 **Price**: $79/month
 
 **Core Features**:
-• 🎬 **Unlimited Videos** - No monthly limits
-• 🎨 **4K Resolution** - Ultra HD quality output
-• 🤖 **AI Captions** - Automatic subtitle generation
-• ✂️ **Advanced Editing** - Multi-track editing
-• 🚀 **Priority Rendering** - Faster export times
-• 📱 **Mobile App Access** - Edit on the go
+• **Unlimited Videos** - No monthly limits
+• **4K Resolution** - Ultra HD quality output
+• **AI Captions** - Automatic subtitle generation
+• **Advanced Editing** - Multi-track editing
+• **Priority Rendering** - Faster export times
+• **Mobile App Access** - Edit on the go
 
 **Support**: 24/7 priority support included
 
@@ -157,15 +157,15 @@ Perfect for professional content creators who need unlimited videos and premium 
     def _format_basic_features(self) -> str:
         """Format Basic plan features"""
         return f"""
-📊 **AutoStream Basic Plan Features**
+**AutoStream Basic Plan Features**
 
 **Price**: $29/month
 
 **Core Features**:
-• 🎬 **10 Videos/month** - Perfect for beginners
-• 🎨 **720p Resolution** - HD quality
-• ✂️ **Basic Editing** - Trim, cut, merge
-• 📱 **Web Access Only**
+• **10 Videos/month** - Perfect for beginners
+• **720p Resolution** - HD quality
+• **Basic Editing** - Trim, cut, merge
+• **Web Access Only**
 
 **Support**: Email support within 48 hours
 
@@ -175,7 +175,7 @@ Great for getting started with video editing!
     def _format_all_features(self) -> str:
         """Format all features comparison"""
         return f"""
-✨ **AutoStream Features Comparison**
+**AutoStream Features Comparison**
 
 **Basic Plan** ($29/month):
 • 10 videos per month
@@ -197,7 +197,7 @@ Upgrade to Pro for unlimited videos and AI captions!
     def _format_comparison(self) -> str:
         """Format plan comparison"""
         return f"""
-📊 **AutoStream Plan Comparison**
+**AutoStream Plan Comparison**
 
 | Feature | Basic | Pro |
 |---------|-------|-----|
