@@ -1,7 +1,7 @@
 import os
 import time
 import re
-from typing import Dict, Any, Tuple
+from typing import Dict, Any, Tuple, Optional
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langgraph.graph import StateGraph, END
 from dotenv import load_dotenv
@@ -62,6 +62,87 @@ class AutoStreamAgent:
         workflow.add_edge("handle_inquiry", END)
         
         return workflow.compile()
+    
+    def _is_question(self, text: str) -> bool:
+        """Check if the message is a question"""
+        question_indicators = ['?', 'what', 'how', 'is there', 'do you', 'can i', 'could i', 
+                               'would you', 'should i', 'which', 'where', 'when', 'why']
+        text_lower = text.lower()
+        return '?' in text or any(text_lower.startswith(word) for word in question_indicators)
+    
+    def _extract_plan_from_message(self, text: str) -> Optional[str]:
+        """
+        Extract plan information from user message
+        Only extracts if it's a statement of intent, not a question
+        """
+        text_lower = text.lower()
+        
+        # Don't extract from questions
+        if self._is_question(text):
+            return None
+        
+        # Keywords that indicate intent to purchase (not just asking)
+        purchase_indicators = ['want', 'need', 'get', 'take', 'buy', 'subscribe', 
+                               'sign up', 'purchase', 'interested in', 'would like']
+        
+        # Check if this is actually a purchase intent
+        is_purchase_intent = any(indicator in text_lower for indicator in purchase_indicators)
+        
+        if not is_purchase_intent:
+            return None
+        
+        # Extract plan type
+        if 'pro' in text_lower:
+            return 'Pro'
+        elif 'basic' in text_lower:
+            return 'Basic'
+        
+        return None
+    
+    def _extract_platform_from_message(self, text: str) -> Optional[str]:
+        """
+        Extract platform information from user message
+        Only extracts if it's clearly stated as their platform, not a question
+        """
+        text_lower = text.lower()
+        
+        # Don't extract from questions
+        if self._is_question(text):
+            return None
+        
+        # Platform mapping
+        platforms = {
+            'youtube': 'YouTube',
+            'instagram': 'Instagram',
+            'tiktok': 'TikTok',
+            'facebook': 'Facebook',
+            'twitter': 'Twitter',
+            'linkedin': 'LinkedIn',
+            'twitch': 'Twitch',
+            'snapchat': 'Snapchat'
+        }
+        
+        # Look for "my [platform]" pattern (strong indicator)
+        for key, value in platforms.items():
+            if f'my {key}' in text_lower:
+                return value
+        
+        # Look for "for my [platform]" pattern
+        for key, value in platforms.items():
+            if f'for my {key}' in text_lower:
+                return value
+        
+        # If purchase intent is clear, check for platform mentions
+        purchase_indicators = ['want', 'need', 'get', 'take', 'buy', 'subscribe', 
+                               'sign up', 'purchase', 'interested in', 'would like']
+        is_purchase_intent = any(indicator in text_lower for indicator in purchase_indicators)
+        
+        if is_purchase_intent:
+            for key, value in platforms.items():
+                if key in text_lower:
+                    return value
+        
+        return None
     
     def process_intent(self, state: AgentState) -> Dict[str, Any]:
         """Process and classify user intent"""
@@ -145,8 +226,36 @@ Is there anything else I can help you with?"""
         # Track what we're waiting for
         waiting_for = updated_state.get("waiting_for")
         
-        # Step 1: Ask for plan selection first
-        if waiting_for == "plan":
+        # SMART EXTRACTION: Try to extract plan and platform from the initial message
+        if not waiting_for and not updated_state.get("selected_plan"):
+            # This is the first high-intent message
+            extracted_plan = self._extract_plan_from_message(last_message)
+            extracted_platform = self._extract_platform_from_message(last_message)
+            
+            if extracted_plan:
+                updated_state["selected_plan"] = extracted_plan
+                print(f"[DEBUG] Smart extraction - Plan: {extracted_plan}")
+            
+            if extracted_platform:
+                updated_state["platform"] = extracted_platform
+                print(f"[DEBUG] Smart extraction - Platform: {extracted_platform}")
+            
+            # Determine next step based on what we extracted
+            if updated_state.get("selected_plan") and updated_state.get("platform"):
+                # Both plan and platform extracted, ask for name and email
+                updated_state["waiting_for"] = "name"
+                print(f"[DEBUG] Both plan and platform extracted - moving to name")
+            elif updated_state.get("selected_plan"):
+                # Only plan extracted, ask for name (will ask platform later)
+                updated_state["waiting_for"] = "name"
+                print(f"[DEBUG] Plan extracted - moving to name")
+            else:
+                # Nothing extracted, ask for plan selection
+                updated_state["waiting_for"] = "plan"
+                print(f"[DEBUG] Nothing extracted - asking for plan selection")
+        
+        # Step 1: Ask for plan selection if needed
+        elif waiting_for == "plan":
             # Check if user selected a plan
             last_message_lower = last_message.lower()
             if "pro" in last_message_lower or "79" in last_message_lower:
@@ -177,48 +286,75 @@ Which plan would you like to sign up for?"""
                     "conversation_history": updated_state.get("conversation_history", [])
                 }
         
-        # Step 2: Capture name after plan is selected
+        # Step 2: Capture name
         elif waiting_for == "name":
             potential_name = last_message.strip()
             if len(potential_name.split()) <= 3 and len(potential_name) <= 50:
-                if not any(keyword in potential_name.lower() for keyword in ["want", "subscribe", "pro", "basic", "plan", "sign", "up"]):
+                if not any(keyword in potential_name.lower() for keyword in ["want", "subscribe", "pro", "basic", "plan", "sign", "up", "yes", "no"]):
                     updated_state["name"] = potential_name.title()
-                    updated_state["waiting_for"] = "email"
+                    # After name, decide what to ask next
+                    if updated_state.get("platform"):
+                        # Platform already extracted, ask for email
+                        updated_state["waiting_for"] = "email"
+                    else:
+                        # Ask for platform next
+                        updated_state["waiting_for"] = "platform"
                     print(f"[DEBUG] Name captured: {updated_state['name']}")
         
-        # Step 3: Capture email
+        # Step 3: Capture platform (if not already extracted)
+        elif waiting_for == "platform":
+            # First check if platform was mentioned in this message
+            extracted_platform = self._extract_platform_from_message(last_message)
+            
+            if extracted_platform:
+                updated_state["platform"] = extracted_platform
+                updated_state["waiting_for"] = "email"
+                print(f"[DEBUG] Platform captured: {updated_state['platform']}")
+            else:
+                # Try to extract from the message using platform keywords
+                platforms = {
+                    "youtube": "YouTube", "instagram": "Instagram", "tiktok": "TikTok",
+                    "facebook": "Facebook", "twitter": "Twitter", "linkedin": "LinkedIn",
+                    "twitch": "Twitch", "snapchat": "Snapchat"
+                }
+                platform_found = None
+                for key, value in platforms.items():
+                    if key in last_message.lower():
+                        platform_found = value
+                        break
+                
+                if platform_found:
+                    updated_state["platform"] = platform_found
+                    updated_state["waiting_for"] = "email"
+                    print(f"[DEBUG] Platform captured: {updated_state['platform']}")
+                else:
+                    # No platform found, ask again
+                    response = """**Which platform do you create content for?** 
+(YouTube, Instagram, TikTok, Facebook, etc.)
+
+This helps us tailor your plan experience."""
+                    new_messages = messages + [response]
+                    return {
+                        "messages": new_messages,
+                        "intent": "high_intent",
+                        "selected_plan": updated_state.get("selected_plan"),
+                        "name": updated_state.get("name"),
+                        "email": updated_state.get("email"),
+                        "platform": updated_state.get("platform"),
+                        "lead_captured": updated_state.get("lead_captured", False),
+                        "waiting_for": updated_state.get("waiting_for"),
+                        "conversation_history": updated_state.get("conversation_history", [])
+                    }
+        
+        # Step 4: Capture email
         elif waiting_for == "email":
             email_pattern = r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'
             email_match = re.search(email_pattern, last_message)
             if email_match:
                 updated_state["email"] = email_match.group()
-                updated_state["waiting_for"] = "platform"
                 print(f"[DEBUG] Email captured: {updated_state['email']}")
         
-        # Step 4: Capture platform
-        elif waiting_for == "platform":
-            platforms = {
-                "youtube": "YouTube", "instagram": "Instagram", "tiktok": "TikTok",
-                "facebook": "Facebook", "twitter": "Twitter", "linkedin": "LinkedIn",
-                "twitch": "Twitch", "snapchat": "Snapchat"
-            }
-            platform_found = None
-            for key, value in platforms.items():
-                if key in last_message.lower():
-                    platform_found = value
-                    break
-            
-            if platform_found:
-                updated_state["platform"] = platform_found
-                print(f"[DEBUG] Platform captured: {updated_state['platform']}")
-        
-        # If this is the first high-intent message (waiting_for is None)
-        if not waiting_for and not updated_state.get("selected_plan"):
-            # First, ask which plan they want
-            updated_state["waiting_for"] = "plan"
-            print(f"[DEBUG] Starting lead collection - will ask for plan selection")
-        
-        # Determine what to ask next based on waiting_for
+        # Generate appropriate response based on what we're waiting for
         if updated_state.get("waiting_for") == "plan" and not updated_state.get("selected_plan"):
             response = """🎯 **Great! Let's get you started with AutoStream.**
 
@@ -243,22 +379,23 @@ Please type **Pro** or **Basic** to continue."""
 
 **What's your name?** (This will be used for your account)"""
         
-        elif updated_state.get("waiting_for") == "email" and not updated_state.get("email"):
-            name = updated_state.get("name", "there")
-            response = f"""Thanks **{name}**! 
-
-**What's your email address?** 
-We'll send the {updated_state['selected_plan']} plan details and account setup instructions there."""
-        
         elif updated_state.get("waiting_for") == "platform" and not updated_state.get("platform"):
             name = updated_state.get("name", "there")
             plan = updated_state.get("selected_plan", "Pro")
-            response = f"""Perfect **{name}**!
+            response = f"""Thanks **{name}**!
 
 **Which platform do you create content for?** 
 (YouTube, Instagram, TikTok, Facebook, etc.)
 
 This helps us tailor your {plan} plan experience."""
+        
+        elif updated_state.get("waiting_for") == "email" and not updated_state.get("email"):
+            name = updated_state.get("name", "there")
+            plan = updated_state.get("selected_plan", "Pro")
+            response = f"""Perfect **{name}**! 
+
+**What's your email address?** 
+We'll send the {plan} plan details and account setup instructions there."""
         
         elif updated_state.get("selected_plan") and updated_state.get("name") and updated_state.get("email") and updated_state.get("platform"):
             # All information collected - trigger lead capture
@@ -266,7 +403,7 @@ This helps us tailor your {plan} plan experience."""
                 updated_state["name"],
                 updated_state["email"],
                 updated_state["platform"],
-                updated_state["selected_plan"]  # Pass the selected plan
+                updated_state["selected_plan"]
             )
             
             if result["success"]:
