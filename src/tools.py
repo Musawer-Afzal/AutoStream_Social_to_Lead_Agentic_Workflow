@@ -1,5 +1,5 @@
 import re
-from typing import Tuple, Optional, Dict, Any
+from typing import Optional
 
 def validate_email(email: str) -> bool:
     """Validate email format using regex pattern"""
@@ -68,13 +68,13 @@ def mock_lead_capture(name: str, email: str, platform: str, plan: str = "Pro") -
     
     # Simulate API call
     print(f"\n{'='*60}")
-    print(f"📞 LEAD CAPTURE API - MOCK CALL")
+    print(f"LEAD CAPTURE API - MOCK CALL")
     print(f"{'='*60}")
-    print(f"✅ Name: {name.strip()}")
-    print(f"✅ Email: {email.strip().lower()}")
-    print(f"✅ Platform: {platform.strip().capitalize()}")
-    print(f"✅ Selected Plan: {plan}")
-    print(f"⏰ Timestamp: {__import__('datetime').datetime.now()}")
+    print(f"Name: {name.strip()}")
+    print(f"Email: {email.strip().lower()}")
+    print(f"Platform: {platform.strip().capitalize()}")
+    print(f"Selected Plan: {plan}")
+    print(f"Timestamp: {__import__('datetime').datetime.now()}")
     print(f"{'='*60}\n")
     
     # Generate a mock lead ID
