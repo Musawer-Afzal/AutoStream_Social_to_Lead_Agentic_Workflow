@@ -1,5 +1,4 @@
 import os
-import time
 import re
 from typing import Dict, Any, Tuple, Optional
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -9,17 +8,17 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-from state import AgentState, create_initial_state
+from state import AgentState
 from rag import retrieve_info
 from intent import detect_intent
-from tools import mock_lead_capture, validate_email, extract_info_from_message
+from tools import mock_lead_capture
 
 
 class AutoStreamAgent:
     """Conversational AI Agent for AutoStream using LangGraph"""
     
     def __init__(self):
-        # Initialize LLM with Gemini 2.5 Flash (Free Tier)
+        # Initialize LLM with Gemini 2.5 Flash (Relacing Deprecated 1.5 Flash)
         self.llm = self._initialize_llm()
         self.graph = self._build_graph()
         self.last_api_call_time = 0
@@ -81,21 +80,39 @@ class AutoStreamAgent:
         if self._is_question(text):
             return None
         
-        # Keywords that indicate intent to purchase (not just asking)
-        purchase_indicators = ['want', 'need', 'get', 'take', 'buy', 'subscribe', 
-                               'sign up', 'purchase', 'interested in', 'would like']
+        # Don't extract if it's asking for information
+        info_patterns = ['give me', 'show me', 'list', 'what are', 'tell me about', 'what is']
+        if any(pattern in text_lower for pattern in info_patterns):
+            # Check if it's a purchase intent disguised as command
+            purchase_words = ['want', 'need', 'buy', 'subscribe', 'sign']
+            if not any(word in text_lower for word in purchase_words):
+                return None
         
-        # Check if this is actually a purchase intent
-        is_purchase_intent = any(indicator in text_lower for indicator in purchase_indicators)
+        # Strong purchase intent indicators
+        strong_purchase = [
+            'i want', 'i need', 'i would like', 'i\'d like',
+            'sign me up', 'subscribe me', 'i\'ll take', 'i will take',
+            'get me', 'please add'
+        ]
         
-        if not is_purchase_intent:
+        # Check for strong purchase intent
+        has_strong_intent = any(phrase in text_lower for phrase in strong_purchase)
+        
+        # Check for plan mention
+        has_pro = 'pro' in text_lower
+        has_basic = 'basic' in text_lower
+        
+        # Extract plan only if there's strong purchase intent
+        if has_strong_intent:
+            if has_pro:
+                return 'Pro'
+            elif has_basic:
+                return 'Basic'
+        
+        # Check for standalone plan requests without strong intent
+        if not has_strong_intent:
+            # If it's just "pro plan" without "want/need", it's likely an inquiry
             return None
-        
-        # Extract plan type
-        if 'pro' in text_lower:
-            return 'Pro'
-        elif 'basic' in text_lower:
-            return 'Basic'
         
         return None
     
@@ -176,10 +193,10 @@ class AutoStreamAgent:
 I'm your AI assistant for AutoStream, the automated video editing platform.
 
 I can help you with:
-• 📊 **Pricing & Plans** - Basic ($29) and Pro ($79) options
-• ✨ **Features** - Video editing, AI captions, 4K resolution
-• 💰 **Policies** - Refunds, support availability
-• 🚀 **Signing Up** - Get started with a plan
+• **Pricing & Plans** - Basic ($29) and Pro ($79) options
+• **Features** - Video editing, AI captions, 4K resolution
+• **Policies** - Refunds, support availability
+• **Signing Up** - Get started with a plan
 
 What would you like to know about AutoStream?"""
         
@@ -193,7 +210,7 @@ What would you like to know about AutoStream?"""
         
         info = retrieve_info(last_question)
         
-        response = f"""📚 **Information about AutoStream**
+        response = f"""**Information about AutoStream**
 
 {info}
 
@@ -209,7 +226,7 @@ Is there anything specific you'd like to know more about? I can help with pricin
         
         # Check if lead already captured
         if state.get("lead_captured", False):
-            response = """✅ **Lead Already Captured**
+            response = """**Lead Already Captured**
 
 Your information has been submitted to our sales team. They will contact you within 24 hours.
 
@@ -356,7 +373,7 @@ This helps us tailor your plan experience."""
         
         # Generate appropriate response based on what we're waiting for
         if updated_state.get("waiting_for") == "plan" and not updated_state.get("selected_plan"):
-            response = """🎯 **Great! Let's get you started with AutoStream.**
+            response = """**Great! Let's get you started with AutoStream.**
 
 Which plan would you like to sign up for?
 
@@ -407,12 +424,12 @@ We'll send the {plan} plan details and account setup instructions there."""
             )
             
             if result["success"]:
-                response = f"""🎉 **Welcome to AutoStream {updated_state['selected_plan']} Plan, {updated_state['name']}!**
+                response = f"""**Welcome to AutoStream {updated_state['selected_plan']} Plan, {updated_state['name']}!**
 
-✅ Lead ID: `{result['lead_id']}`
-📧 Confirmation sent to: {updated_state['email']}
-🎬 Platform: {updated_state['platform']}
-📊 Plan: {updated_state['selected_plan']}
+Lead ID: `{result['lead_id']}`
+Confirmation sent to: {updated_state['email']}
+Platform: {updated_state['platform']}
+Plan: {updated_state['selected_plan']}
 
 **What happens next?**
 1. Our sales team will contact you within 24 hours
@@ -423,7 +440,7 @@ Anything else I can help with?"""
                 updated_state["lead_captured"] = True
                 updated_state["waiting_for"] = None
             else:
-                response = f"""❌ **Error**: {result['message']}
+                response = f"""**Error**: {result['message']}
 
 Please provide valid information to continue with the signup."""
         else:
