@@ -280,11 +280,14 @@ services:
 ```
 
 ## 5. Ngrok for Local Testing
-```bash
+
 ### Expose local webhook to internet
+```bash
 ngrok http 8000
 
 ### Configure in Meta Developer Console
+```
+```bash
 Webhook URL: https://your-ngrok-url.ngrok.io/webhook
 Verify Token: your_verify_token
 ```
