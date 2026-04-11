@@ -280,14 +280,14 @@ services:
 ```
 
 ## 5. Ngrok for Local Testing
-`
+```bash
 ### Expose local webhook to internet
 ngrok http 8000
 
 ### Configure in Meta Developer Console
 Webhook URL: https://your-ngrok-url.ngrok.io/webhook
 Verify Token: your_verify_token
-`
+```
 
 ## 6. Meta Developer Configuration
 1. Go to [Meta for Developers](https://developers.facebook.com/)
