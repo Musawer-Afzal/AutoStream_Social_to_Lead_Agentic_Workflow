@@ -26,11 +26,23 @@ An intelligent conversational AI agent built with LangGraph and Google Gemini 2.
 | Component | Technology |
 |-----------|------------|
 | Language | Python 3.9+ |
-| LLM | Google Gemini 2.5 Flash (Free Tier) |
+| LLM | Google Gemini 2.5 Flash (Replaces Deprecated 1.5 Flash) |
 | Framework | LangChain + LangGraph |
 | State Management | LangGraph State (TypedDict) |
 | RAG | Local JSON Knowledge Base |
 | API Rate Limiting | Token Bucket + Sliding Window |
+
+## ⚠️ Important Note on Gemini Model Version
+
+The original assignment specified **Gemini 1.5 Flash**, but this model has been **deprecated** by Google. 
+
+Therefore, this implementation uses **Gemini 2.5 Flash** instead, which:
+- Is fully backward compatible
+- Offers better performance and efficiency  
+- Remains on the **free tier** with the same rate limits
+- Provides improved response quality
+
+The agent logic, API calls, and rate limiting remain identical regardless of the model version. If Gemini 1.5 Flash becomes available again, simply change the model name in `src/agent.py` line 30 from `"gemini-2.5-flash"` to `"gemini-1.5-flash"`.
 
 ## Project Structure
 ```
@@ -123,6 +135,8 @@ I chose **LangGraph** over AutoGen for several key reasons:
 3. **Conditional Routing**: LangGraph's conditional edges allow dynamic routing based on intent and collected data. The agent can seamlessly transition between greeting, inquiry, and lead collection modes.
 
 4. **Simplicity for This Use Case**: While AutoGen is powerful for multi-agent systems, this single-agent conversational workflow with clear state transitions is more elegantly expressed in LangGraph's graph-based paradigm.
+
+`> **Note**: While the assignment specified Gemini 1.5 Flash, this implementation uses Gemini 2.5 Flash due to Google's deprecation of the 1.5 version. The upgrade maintains full compatibility while providing better performance.`
 
 ## How State Is Managed
 State management follows a **centralized, typed approach**:
@@ -345,13 +359,14 @@ Issue | Solution
 API Key Error | Check `.env` file has `GOOGLE_API_KEY=your_key`
 Rate Limit Exceeded | Wait 60 seconds or type `stats` to check usage
 404 Model Error | Update model name in `agent.py` to `gemini-2.5-flash`
+Model deprecated error | Update model name in `src/agent.py` to `gemini-2.5-flash` (1.5 Flash is deprecated by Google)
 
 ## Acknowledgments
 * Google Gemini for free tier LLM access
 * LangChain/LangGraph community
 * Meta WhatsApp Business API
 
-**Built for ServiceHive Inflx Assignment | AutoStream AI Agent v1.0**
+# Built for ServiceHive Inflx Assignment | AutoStream AI Agent v1.0
 
 This README includes:
 1. **How to run locally** - Step-by-step instructions with commands
