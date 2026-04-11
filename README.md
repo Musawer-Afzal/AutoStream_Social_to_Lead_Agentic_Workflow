@@ -284,9 +284,8 @@ services:
 ### Expose local webhook to internet
 ```bash
 ngrok http 8000
-
-### Configure in Meta Developer Console
 ```
+### Configure in Meta Developer Console
 ```bash
 Webhook URL: https://your-ngrok-url.ngrok.io/webhook
 Verify Token: your_verify_token
