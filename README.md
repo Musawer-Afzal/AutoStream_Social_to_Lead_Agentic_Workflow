@@ -1,8 +1,8 @@
-# 🎬 AutoStream AI Agent - Conversational Lead Generation
+# AutoStream AI Agent - Conversational Lead Generation
 
 An intelligent conversational AI agent built with LangGraph and Google Gemini 2.5 Flash that converts social media conversations into qualified business leads for AutoStream, a SaaS video editing platform.
 
-## 📋 Table of Contents
+## Table of Contents
 - [Features](#features)
 - [Tech Stack](#tech-stack)
 - [Project Structure](#project-structure)
@@ -12,7 +12,7 @@ An intelligent conversational AI agent built with LangGraph and Google Gemini 2.
 - [Demo Flow](#demo-flow)
 - [Troubleshooting](#troubleshooting)
 
-## ✨ Features
+## Features
 
 - **Intent Detection**: Classifies user messages into greetings, inquiries, or high-intent leads
 - **RAG-Powered Knowledge Base**: Retrieves pricing, features, and policy information from local JSON
@@ -21,7 +21,7 @@ An intelligent conversational AI agent built with LangGraph and Google Gemini 2.
 - **Tool Execution**: Triggers mock lead capture API only after collecting all required information
 - **Rate Limiting**: Built-in protection for free tier API limits
 
-## 🛠 Tech Stack
+## Tech Stack
 
 | Component | Technology |
 |-----------|------------|
@@ -32,7 +32,7 @@ An intelligent conversational AI agent built with LangGraph and Google Gemini 2.
 | RAG | Local JSON Knowledge Base |
 | API Rate Limiting | Token Bucket + Sliding Window |
 
-## 📁 Project Structure
+## Project Structure
 ```
 autostream-agent/
 │
@@ -54,7 +54,7 @@ autostream-agent/
 └── rate_limiter.py # API rate limiting protection
 ```
 
-## 🚀 How to Run Locally
+## How to Run Locally
 
 ### Prerequisites
 - Python 3.9 or higher
@@ -67,11 +67,11 @@ cd autostream-agent
 ```
 
 ### Step 2: Create Virtual Environment
-# Windows
+**Windows**
 python -m venv venv
 venv\Scripts\activate
 
-# Mac/Linux
+**Mac/Linux**
 python3 -m venv venv
 source venv/bin/activate
 
@@ -87,6 +87,7 @@ pip install -r requirements.txt
 python main.py
 
 ### Step 6: Test the Conversation
+```
 Try this sample conversation:
 You: Hi
 Agent: [Welcome message]
@@ -102,6 +103,7 @@ Agent: What's your email?
 
 You: john@example.com
 Agent: [Lead captured successfully]
+```
 
 **Available Commands**
 **Command	Action**
@@ -151,6 +153,7 @@ class AgentState(TypedDict):
 The agent can be deployed as a WhatsApp chatbot using Meta's WhatsApp Business API. Here's the complete architecture and implementation approach:
 
 ## Architecture Overview
+```
 ┌─────────────┐     ┌──────────────────┐     ┌─────────────┐     ┌──────────────┐
 │  WhatsApp   │────▶│  Webhook Server  │────▶│   Session   │────▶│  AutoStream  │
 │    User     │◀────│   (FastAPI)      │◀────│   Manager   │◀────│    Agent     │
@@ -161,15 +164,16 @@ The agent can be deployed as a WhatsApp chatbot using Meta's WhatsApp Business A
                     │  Meta APIs  │           │   Redis/    │
                     │  (Callback) │           │  DynamoDB   │
                     └─────────────┘           └─────────────┘
+```
 
 # Implementation Steps
-**1. Set Up WhatsApp Business API**
-# Prerequisites
+## 1. Set Up WhatsApp Business API
+### Prerequisites
 - Facebook Business Account
 - Verified Business Display Name
 - WhatsApp Business App from Meta Developers
 
-**2. Webhook Server (FastAPI Example)**
+## 2. Webhook Server (FastAPI Example)
 Create `whatsapp_webhook.py`:
 ```python
 from fastapi import FastAPI, Request, Response
@@ -202,16 +206,10 @@ async def whatsapp_webhook(request: Request):
     user_message = form_data.get('Body', '')
     user_phone = form_data.get('From', '')
     
-    # Get or create session
+    # Get/create, process, save and then response back to WhatsAPp
     session_state = get_session(user_phone)
-    
-    # Process with agent
     response, new_state = agent.get_response(user_message, session_state)
-    
-    # Save updated session
     save_session(user_phone, new_state)
-    
-    # Send response back to WhatsApp
     twiml = MessagingResponse()
     twiml.message(response)
     return Response(content=str(twiml), media_type="application/xml")
@@ -227,7 +225,7 @@ async def verify_webhook(request: Request):
     return Response(status_code=403)
 ```
 
-**3. Session Management Strategy**
+## 3. Session Management Strategy
 ```python
 # Session Manager with Redis
 class SessionManager:
@@ -260,7 +258,7 @@ class SessionManager:
         self.redis.delete(key)
 ```
 
-**4. Deployment Configuration**
+## 4. Deployment Configuration
 ```python
 # docker-compose.yml
 version: '3.8'
@@ -281,17 +279,17 @@ services:
       - "6379:6379"
 ```
 
-**5. Ngrok for Local Testing**
+## 5. Ngrok for Local Testing
 `
-# Expose local webhook to internet
+### Expose local webhook to internet
 ngrok http 8000
 
-# Configure in Meta Developer Console
+### Configure in Meta Developer Console
 Webhook URL: https://your-ngrok-url.ngrok.io/webhook
 Verify Token: your_verify_token
 `
 
-**6. Meta Developer Configuration**
+## 6. Meta Developer Configuration
 1. Go to [Meta for Developers](https://developers.facebook.com/)
 2. Select your WhatsApp App
 3. Navigate to **WhatsApp > Configuration**
@@ -321,10 +319,10 @@ REDIS_PORT=6379
 ## Demo Flow
 Here's a complete demo conversation showing all features:
 👤 User: Hi
-🤖 Agent: 👋 Welcome to AutoStream Support! I can help with pricing, features, or signing up.
+🤖 Agent: Welcome to AutoStream Support! I can help with pricing, features, or signing up.
 
 👤 User: What are your pricing plans?
-🤖 Agent: 📊 Basic Plan: $29/month (10 videos, 720p)
+🤖 Agent: Basic Plan: $29/month (10 videos, 720p)
               Pro Plan: $79/month (Unlimited, 4K, AI captions)
 
 👤 User: I want the Pro plan for my YouTube channel
@@ -336,7 +334,7 @@ Here's a complete demo conversation showing all features:
 
 👤 User: sarah@youtube.com
 🤖 Agent: Perfect! [Triggers lead capture]
-          🎉 Welcome to AutoStream Pro Plan, Sarah!
+          Welcome to AutoStream Pro Plan, Sarah!
           Lead ID: LD-ABC123
 
 ## Troubleshooting
@@ -346,10 +344,7 @@ API Key Error | Check `.env` file has `GOOGLE_API_KEY=your_key`
 Rate Limit Exceeded | Wait 60 seconds or type `stats` to check usage
 404 Model Error | Update model name in `agent.py` to `gemini-2.5-flash`
 
-### License
-MIT License
-
-### Acknowledgments
+## Acknowledgments
 * Google Gemini for free tier LLM access
 * LangChain/LangGraph community
 * Meta WhatsApp Business API
